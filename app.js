@@ -1,23 +1,15 @@
 var express = require('express');
 var mongoose = require('mongoose');
+var bodyParser = require('body-parser');
 var app = express();
 var port = process.env.PORT || 3000;
-var router = express.Router();
 var db = mongoose.connect('mongodb://localhost/festivalAPI');
 var Festival = require('./models/festivalModel');
 
+app.use(bodyParser.urlencoded({extended:true}));
+app.use(bodyParser.json());
 
-router.route('/festivals')
-
-	.get(function(req, res) {
-		Festival.find(function(err, festivals) {
-			if(err) {
-				res.status(500).send(err);
-			} else {
-				res.json(festivals);
-			}
-		});
-	});
+router = require('./routes/festivalRoutes.js')(Festival);
 
 app.use('/api', router);
 
