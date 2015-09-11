@@ -24,10 +24,31 @@ var routes = function(Festival) {
    */
     .post(function(req, res) {
       var festival = new Festival(req.body);
+      festival.save(function(err) {
+        if(err) {
+          res.status(500).send(err);
+        } else {
+          res.status(201).send(festival);
+        }
+      });
 
-      festival.save();
-      res.status(201).send(festival);
     });
+
+  /**
+   * Middleware for requests sent to an id
+   */
+  router.use('/festivals/:festivalId', function(req, res, next) {
+    Festival.findById(req.params.festivalId, function(err, festival) {
+      if(err) {
+        res.status(500).send(err);
+      } else if(festival) {
+        req.festival = festival;
+        next();
+      } else {
+        res.status(404).send('festival not found');
+      }
+    });
+  });
 
   router.route('/festivals/:festivalId')
 
@@ -35,11 +56,55 @@ var routes = function(Festival) {
    * Get a festival by id.
    */
     .get(function(req, res) {
-      Festival.findById(req.params.festivalId, function(err, festival) {
+      var returnFestival = req.festival.toJSON();
+      returnFestival.links = {};
+      var locationFilter = 'http://' + req.headers.host + '/api/festivals?location=' + returnFestival.location;
+      returnFestival.links.filterByLocation = locationFilter.split(' ').join('%20');
+      res.json(returnFestival);
+    })
+
+  /**
+   * Update a festival
+   */
+    .put(function(req, res) {
+      req.festival.name = req.body.name;
+      req.festival.location = req.body.location;
+      req.festival.attended = req.body.attended;
+      req.festival.save(function(err) {
         if(err) {
           res.status(500).send(err);
         } else {
-          res.json(festival);
+          res.json(req.festival);
+        }
+      });
+      res.json(festival);
+    })
+    .patch(function(req, res) {
+      if (req.body._id) {
+        delete req.body._id;
+      }
+      for(var property in req.body) {
+        req.festival[property] = req.body[property];
+      }
+
+      req.festival.save(function(err) {
+        if(err) {
+          res.status(500).send(err);
+        } else {
+          res.json(req.festival);
+        }
+      });
+    })
+
+  /**
+   * Delete a festival
+   */
+    .delete(function(req, res) {
+      req.festival.remove(function(err) {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          res.status(204).send('removed');
         }
       });
     });
